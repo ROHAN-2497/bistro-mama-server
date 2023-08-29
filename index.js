@@ -1,6 +1,7 @@
 const express = require("express");
 const app = express();
 const cors = require("cors");
+const jwt = require('jsonwebtoken');
 require("dotenv").config();
 const port = process.env.PORT || 5000;
 
@@ -31,11 +32,44 @@ async function run() {
     const reviewCollection = client.db("bistroDb").collection("reviews")
     const cartCollection = client.db("bistroDb").collection("carts")
 
+  app.post('/jwt', (req, res) =>{
+    const user = req.body;
+    const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+    res.send({token})
+  })
+
+
 // users Apis
+
+app.get('/users', async (res, req) =>{
+  const result = await usersCollection.find().toArray()
+  res.send(result);
+})
+
+
 app.post('/users', async(req, res) =>{
   const user = req.body;
+  console.log(user)
+  const query = {email:user.email}
+  const exitingUser = await usersCollection.findOne(query);
+  if(exitingUser){
+    console.log('exiting user', exitingUser)
+return res.send({message: 'user already exists'})
+  }
   const result = await usersCollection.insertOne(user);
   res.send(result);
+})
+
+app.patch('/users/admin/:id', async (req, res) =>{
+  const id = req.params.id;
+  const filter = { _id : new ObjectId(id)}
+  const updateDoc = {
+    $set: {
+      role: 'admin'
+    },
+  };
+const result = await usersCollection.updateOne(filter, updateDoc);
+res.send(result);
 })
 
 
